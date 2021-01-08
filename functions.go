@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptrace"
 	"time"
@@ -17,23 +18,43 @@ type parameters struct {
 	Interval int      `json:"speed_interval"`
 }
 
-func getParameters() ([]string, []string, int) {
+type ipInfoStruct struct {
+	City    string  `json:"city"`
+    Country string  `json:"country"`
+	ISP     string  `json:"org"`
+}
 
-	apiURL := "http://ispmon.cloud/config"
+
+func getMacAddr() ([]string, error) {
+	ifas, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+	var as []string
+	for _, ifa := range ifas {
+		a := ifa.HardwareAddr.String()
+		if a != "" {
+			as = append(as, a)
+		}
+	}
+	return as, nil
+}
+
+func getParameters() ([]string, []string, int, error) {
 
 	apiClient := http.Client{
 		Timeout: time.Second * 2,
 	}
 
-	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+	req, err := http.NewRequest(http.MethodGet, ParametersUrl, nil)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, -1, fmt.Errorf("could not build HTTP request: %g", err)
 	}
 
 	res, getErr := apiClient.Do(req)
 
 	if getErr != nil {
-		log.Fatal(getErr)
+		return nil, nil, -1, fmt.Errorf("could not get HTTP request: %g", getErr)
 	}
 
 	if res.Body != nil {
@@ -42,7 +63,7 @@ func getParameters() ([]string, []string, int) {
 
 	body, readErr := ioutil.ReadAll(res.Body)
 	if readErr != nil {
-		log.Fatal(readErr)
+		return nil, nil, -1, fmt.Errorf("reading response body error: %g", readErr)
 	}
 
 	response := parameters{}
@@ -53,7 +74,46 @@ func getParameters() ([]string, []string, int) {
 
 	fmt.Println(response.Ping)
 
-	return response.Ping, response.HTTP, response.Interval
+	return response.Ping, response.HTTP, response.Interval, nil
+
+}
+
+func getIspInfo() (map[string]string, error) {
+	infoClient := http.Client{
+		Timeout: time.Second * 2,
+	}
+
+	req, err := http.NewRequest(http.MethodGet, IpInfoUrl, nil)
+	if err != nil {
+		log.Fatal("Setting Req Error: ",err)
+	}
+
+	res, getErr := infoClient.Do(req)
+	if getErr != nil {
+		log.Fatal("Do req Error: ",getErr)
+	}
+
+	if res.Body != nil {
+		defer res.Body.Close()
+	}
+
+	body, readErr := ioutil.ReadAll(res.Body)
+	if readErr != nil {
+		log.Fatal("Read Error: ",readErr)
+	}
+
+	respInfo := ipInfoStruct{}
+	jsonErr  := json.Unmarshal(body, &respInfo)
+	if jsonErr != nil {
+		log.Fatal("JSON Unmarshal Error: ",jsonErr)
+	}
+
+	returnInfo := make(map[string]string)
+	returnInfo["country"] = respInfo.Country
+	returnInfo["city"]    = respInfo.City
+	returnInfo["isp"]     = respInfo.ISP
+
+	return returnInfo, nil
 
 }
 
