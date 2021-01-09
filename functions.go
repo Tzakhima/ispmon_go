@@ -13,15 +13,15 @@ import (
 )
 
 type parameters struct {
-	Ping     []string `json:"ping_target"`
-	HTTP     []string `json:"http_target"`
-	Interval int      `json:"speed_interval"`
+	Ping		[]string `json:"ping_target"`
+	HTTP      	[]string `json:"http_target"`
+	Interval  	int      `json:"speed_interval"`
 }
 
 type ipInfoStruct struct {
-	City    string  `json:"city"`
-    Country string  `json:"country"`
-	ISP     string  `json:"org"`
+	City      	string  `json:"city"`
+    Country   	string  `json:"country"`
+	ISP       	string  `json:"org"`
 }
 
 
@@ -117,37 +117,36 @@ func getIspInfo() (map[string]string, error) {
 
 }
 
-func httpStat(url string, c chan map[string]string) {
+func getHttpStat(url string, c chan map[string]map[string]int64) {
 
-	req, _ := http.NewRequest("GET", url, nil)
+	schema := "https://"
+
+	req, _ := http.NewRequest("GET", schema+url, nil)
 
 	var start, connect, dns, tlsHandshake time.Time
 
-	results := make(map[string]string)
+    results := make(map[string]map[string]int64)
+	results[url] = make(map[string]int64)
 
-	results["url"] = url
 
 	trace := &httptrace.ClientTrace{
 		DNSStart: func(dsi httptrace.DNSStartInfo) { dns = time.Now() },
 		DNSDone: func(ddi httptrace.DNSDoneInfo) {
-			results["dnsTime"] = time.Since(dns).String()
+			results[url]["dnsTime"] = int64(time.Since(dns) / time.Millisecond)
 		},
 
 		TLSHandshakeStart: func() { tlsHandshake = time.Now() },
 		TLSHandshakeDone: func(cs tls.ConnectionState, err error) {
-			results["tlsTime"] = time.Since(tlsHandshake).String()
+			results[url]["tlsTime"] = int64(time.Since(tlsHandshake) / time.Millisecond)
 		},
 
 		ConnectStart: func(network, addr string) { connect = time.Now() },
 		ConnectDone: func(network, addr string, err error) {
-			results["connTime"] = time.Since(connect).String()
+			results[url]["connTime"] =int64(time.Since(connect) / time.Millisecond)
 		},
 
 		GotFirstResponseByte: func() {
-			results["ttfbTime"] = time.Since(start).String()
-		},
-		GotConn: func(connInfo httptrace.GotConnInfo) {
-			results["connReuse"] = fmt.Sprint(connInfo.Reused)
+			results[url]["ttfbTime"] = int64(time.Since(start) / time.Millisecond)
 		},
 	}
 

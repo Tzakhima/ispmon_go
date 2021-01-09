@@ -30,7 +30,7 @@ func main() {
     fmt.Println(uid)
 
 
-	// get isp info from ipinfo.io
+	// get client and ISP info from ipinfo.io
 	IpInfo, err := getIspInfo()
 	if err !=nil {
 		fmt.Printf("Error getting client IP info: %s", err )
@@ -40,23 +40,24 @@ func main() {
 
 	// getting targets and interval parameters
 	pingLinks, httpLinks, interval, err := getParameters()
-
-	// ping the target
-
-	// http trace
-	schema := "https://"
-
 	fmt.Println(pingLinks, httpLinks, interval)
 
-	c := make(chan map[string]string)
+
+	// http trace
+	var httpResults []map[string]map[string]int64
+	c := make(chan map[string]map[string]int64)
 
 	for _, link := range httpLinks {
-		go httpStat(schema+link, c)
+		go getHttpStat(link, c)
 	}
 
-	for i := 0; i < len(pingLinks); i++ {
-		fmt.Println(<-c)
+	for i := 0; i < len(httpLinks); i++ {
+		httpResults = append(httpResults, <-c)
 	}
+
+	fmt.Printf("%+v", httpResults)
+
+	// ping test
 
 	// speed test
 
