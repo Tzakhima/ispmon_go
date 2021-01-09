@@ -4,14 +4,17 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/go-ping/ping"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/http/httptrace"
+	"sync"
 	"time"
 )
 
+// Init global types
 type parameters struct {
 	Ping		[]string `json:"ping_target"`
 	HTTP      	[]string `json:"http_target"`
@@ -19,12 +22,13 @@ type parameters struct {
 }
 
 type ipInfoStruct struct {
-	City      	string  `json:"city"`
-    Country   	string  `json:"country"`
-	ISP       	string  `json:"org"`
+	City		string  `json:"city"`
+    Country		string  `json:"country"`
+	ISP			string  `json:"org"`
 }
 
 
+// Functions Start
 func getMacAddr() ([]string, error) {
 	ifas, err := net.Interfaces()
 	if err != nil {
@@ -71,8 +75,6 @@ func getParameters() ([]string, []string, int, error) {
 	if jsonErr != nil {
 		log.Fatal(jsonErr)
 	}
-
-	fmt.Println(response.Ping)
 
 	return response.Ping, response.HTTP, response.Interval, nil
 
@@ -157,4 +159,32 @@ func getHttpStat(url string, c chan map[string]map[string]int64) {
 	}
 
 	c <- results
+}
+
+func getPingStat(target string, wg *sync.WaitGroup) map[string]map[string]float64 {
+	defer wg.Done()
+
+	result := make(map[string]map[string]float64)
+	result[target] = make(map[string]float64)
+
+	pinger, err := ping.NewPinger(target)
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
+
+	pinger.Count = 10
+	err = pinger.Run()
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
+
+	stats := pinger.Statistics()
+
+	result[target]["packetLoss"] = stats.PacketLoss
+	result[target]["minRTT"]     = float64(stats.MinRtt / time.Millisecond)
+	result[target]["avgRTT"]     = float64(stats.AvgRtt / time.Millisecond)
+	result[target]["maxRTT"]     = float64(stats.MaxRtt / time.Millisecond)
+
+	return result
+
 }

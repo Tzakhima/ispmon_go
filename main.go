@@ -1,8 +1,19 @@
+// ISPMON Client
+// Gets list of targets from http://ispmon.cloud/config and executing the following:
+// HTTP Trace - measure the DNS time, TLS Handshake time, Connection time and Time To First Byte.
+// PING       - running 60 PING against the list of targets. reports back the avg RTT and Packet Loss ratio.
+// SpeedTest  - Although the results are not always accurate, running SpeedTest every <interval> and reports back
+//              Download and Upload speed.
+//
+//  When starting, you should see your UID printed to STDOUT.
+//  To see your results please navigate to https://ispmon.cloud Grafana dashboard. (look for your UID)
+
 package main
 
 import (
 	"crypto/sha1"
 	"fmt"
+	"sync"
 )
 
 const (
@@ -45,7 +56,7 @@ func main() {
 
 	// http trace
 	var httpResults []map[string]map[string]int64
-	c := make(chan map[string]map[string]int64)
+	c := make(chan map[string]map[string]int64) // Using channel and not WaitingGroup just for fun :-)
 
 	for _, link := range httpLinks {
 		go getHttpStat(link, c)
@@ -55,9 +66,22 @@ func main() {
 		httpResults = append(httpResults, <-c)
 	}
 
-	fmt.Printf("%+v", httpResults)
+	fmt.Printf("%+v\n", httpResults)
 
-	// ping test
+	// PING test
+	var wg sync.WaitGroup
+    var pingResults []map[string]map[string]float64
+
+	for _, t := range pingLinks {
+		wg.Add(1)
+		go func (t string){
+			result := getPingStat(t, &wg)
+			pingResults = append(pingResults, result)
+		}(t)
+	}
+
+	wg.Wait()
+	fmt.Printf("%+v\n", pingResults)
 
 	// speed test
 
