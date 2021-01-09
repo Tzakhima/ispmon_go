@@ -7,7 +7,6 @@ import (
 	"github.com/ddo/go-fast"
 	"github.com/go-ping/ping"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -68,13 +67,13 @@ func getParameters() ([]string, []string, int, error) {
 
 	body, readErr := ioutil.ReadAll(res.Body)
 	if readErr != nil {
-		return nil, nil, -1, fmt.Errorf("reading response body error: %g", readErr)
+		return nil, nil, -1, fmt.Errorf("could not read Body: %g", readErr)
 	}
 
 	response := parameters{}
 	jsonErr := json.Unmarshal(body, &response)
 	if jsonErr != nil {
-		log.Fatal(jsonErr)
+		return nil, nil, -1, fmt.Errorf("could not unmarshal json: %g", jsonErr)
 	}
 
 	return response.Ping, response.HTTP, response.Interval, nil
@@ -88,12 +87,12 @@ func getIspInfo() (map[string]string, error) {
 
 	req, err := http.NewRequest(http.MethodGet, IpInfoUrl, nil)
 	if err != nil {
-		log.Fatal("Setting Req Error: ",err)
+		return nil, fmt.Errorf("could not build HTTP request: %g", err)
 	}
 
 	res, getErr := infoClient.Do(req)
 	if getErr != nil {
-		log.Fatal("Do req Error: ",getErr)
+		return nil, fmt.Errorf("could not get HTTP request: %g", getErr)
 	}
 
 	if res.Body != nil {
@@ -102,13 +101,13 @@ func getIspInfo() (map[string]string, error) {
 
 	body, readErr := ioutil.ReadAll(res.Body)
 	if readErr != nil {
-		log.Fatal("Read Error: ",readErr)
+		return nil, fmt.Errorf("could not read body: %g", readErr)
 	}
 
 	respInfo := ipInfoStruct{}
 	jsonErr  := json.Unmarshal(body, &respInfo)
 	if jsonErr != nil {
-		log.Fatal("JSON Unmarshal Error: ",jsonErr)
+		return nil, fmt.Errorf("could not unmarshal JSON: %g", jsonErr)
 	}
 
 	returnInfo := make(map[string]string)
@@ -156,7 +155,7 @@ func getHttpStat(url string, c chan map[string]map[string]int64) {
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
 	start = time.Now()
 	if _, err := http.DefaultTransport.RoundTrip(req); err != nil {
-		log.Fatal(err)
+		fmt.Errorf("could not run HTTP stat: %g", err)
 	}
 
 	c <- results
