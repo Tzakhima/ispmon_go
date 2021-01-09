@@ -22,6 +22,16 @@ const (
 	//PushInfoUrl   string = "http://ispmon.cloud/gometrics"
 )
 
+type pushResults struct {
+	http		[]map[string]map[string]int64
+	ping		[]map[string]map[string]float64
+	speed       float64
+	uid			string
+	isp 		string
+	country		string
+	city		string
+}
+
 func main() {
 
 	// calculate user unique id based on MAC addresses. variable: uid
@@ -38,7 +48,6 @@ func main() {
 
 	macSha1  := sha1.Sum([]byte(macString))
     uid := fmt.Sprintf("%x\n", string(macSha1[:]))[0:10]
-    fmt.Println(uid)
 
 
 	// get client and ISP info from ipinfo.io
@@ -46,12 +55,11 @@ func main() {
 	if err !=nil {
 		fmt.Printf("Error getting client IP info: %s", err )
 	}
-	fmt.Printf("%+v\n", IpInfo)
 
 
 	// getting targets and interval parameters
 	pingLinks, httpLinks, interval, err := getParameters()
-	fmt.Println(pingLinks, httpLinks, interval)
+	fmt.Print(interval)
 
 
 	// http trace
@@ -66,7 +74,6 @@ func main() {
 		httpResults = append(httpResults, <-c)
 	}
 
-	fmt.Printf("%+v\n", httpResults)
 
 	// PING test
 	var wg sync.WaitGroup
@@ -81,13 +88,24 @@ func main() {
 	}
 
 	wg.Wait()
-	fmt.Printf("%+v\n", pingResults)
+
 
 	// speed test
+    var downloadSpeed float64
+	downloadSpeed = getDownloadSpeed()
+
 
 	// push results
+	push := pushResults{}
+	push.speed   = downloadSpeed
+	push.http    = httpResults
+	push.ping    = pingResults
+	push.isp     = IpInfo["isp"]
+	push.country = IpInfo["country"]
+	push.city    = IpInfo["city"]
+	push.uid     = uid
 
-	//Get PING, HTTP and speed test parameters
+	fmt.Printf("%+v\n", push)
 
 
 }

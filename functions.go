@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/ddo/go-fast"
 	"github.com/go-ping/ping"
 	"io/ioutil"
 	"log"
@@ -169,13 +170,23 @@ func getPingStat(target string, wg *sync.WaitGroup) map[string]map[string]float6
 
 	pinger, err := ping.NewPinger(target)
 	if err != nil {
-		fmt.Printf("%s", err)
+		result[target]["packetLoss"] = 0
+		result[target]["minRTT"]     = 0
+		result[target]["avgRTT"]     = 0
+		result[target]["maxRTT"]     = 0
+
+		return result
 	}
 
 	pinger.Count = 10
 	err = pinger.Run()
 	if err != nil {
-		fmt.Printf("%s", err)
+		result[target]["packetLoss"] = 0
+		result[target]["minRTT"]     = 0
+		result[target]["avgRTT"]     = 0
+		result[target]["maxRTT"]     = 0
+
+		return result
 	}
 
 	stats := pinger.Statistics()
@@ -187,4 +198,38 @@ func getPingStat(target string, wg *sync.WaitGroup) map[string]map[string]float6
 
 	return result
 
+}
+
+func getDownloadSpeed() float64 {
+	fastCom := fast.New()
+
+	// init
+	err := fastCom.Init()
+	if err != nil {
+		return 0
+	}
+
+	// get urls
+	urls, err := fastCom.GetUrls()
+	if err != nil {
+		return 0
+	}
+
+	// measure
+	KbpsChan := make(chan float64)
+	var last float64
+
+	go func() {
+		for Kbps := range KbpsChan {
+			last = Kbps
+		}
+	}()
+
+	err = fastCom.Measure(urls, KbpsChan)
+
+	if err != nil {
+		return 0
+	}
+
+	return last // return download speed in Kbps
 }
