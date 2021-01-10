@@ -15,7 +15,6 @@ import (
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"sync"
@@ -28,6 +27,10 @@ const (
 	PushInfoUrl   string = "http://ispmon.cloud/gometrics"
 )
 
+var (
+	pingCount int = 10
+)
+
 type PushResults struct {
 	Http		[]map[string]map[string]int64
 	Ping		[]map[string]map[string]float64
@@ -37,6 +40,7 @@ type PushResults struct {
 	Country		string
 	City		string
 }
+
 
 func main() {
 
@@ -126,26 +130,22 @@ func main() {
 		push.City = IpInfo["city"]
 		push.Uid = uid
 
-		fmt.Printf("%+v\n", push)
-
 		b, err := json.Marshal(push)
-		//fmt.Printf("%+v", b)
-
-
 		req, err := http.NewRequest("POST", PushInfoUrl, bytes.NewBuffer(b))
 		req.Header.Set("Content-Type", "application/json")
 
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			panic(err)
+			fmt.Errorf("could not send HTTP POST: %g", err)
 		}
 		defer resp.Body.Close()
 
-		fmt.Println("response Status:", resp.Status)
-		fmt.Println("response Headers:", resp.Header)
-		body, _ := ioutil.ReadAll(resp.Body)
-		fmt.Println("response Body:", string(body))
+		// Print Response
+		//fmt.Println("response Status:", resp.Status)
+		//fmt.Println("response Headers:", resp.Header)
+		//body, _ := ioutil.ReadAll(resp.Body)
+		//fmt.Println("response Body:", string(body))
 	}
 
 

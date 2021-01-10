@@ -168,7 +168,10 @@ func getPingStat(target string, wg *sync.WaitGroup) map[string]map[string]float6
 	result[target] = make(map[string]float64)
 
 	pinger, err := ping.NewPinger(target)
+	pinger.SetPrivileged(true)
+
 	if err != nil {
+		fmt.Printf("%+v", err)
 		result[target]["packetLoss"] = 0
 		result[target]["minRTT"]     = 0
 		result[target]["avgRTT"]     = 0
@@ -177,9 +180,10 @@ func getPingStat(target string, wg *sync.WaitGroup) map[string]map[string]float6
 		return result
 	}
 
-	pinger.Count = 10
+	pinger.Count = pingCount
 	err = pinger.Run()
 	if err != nil {
+		fmt.Printf("%+v", err)
 		result[target]["packetLoss"] = 0
 		result[target]["minRTT"]     = 0
 		result[target]["avgRTT"]     = 0
