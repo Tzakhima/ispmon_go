@@ -11,8 +11,12 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha1"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -21,17 +25,17 @@ import (
 const (
 	ParametersUrl string = "http://ispmon.cloud/config"
 	IpInfoUrl     string = "http://ipinfo.io/"
-	//PushInfoUrl   string = "http://ispmon.cloud/gometrics"
+	PushInfoUrl   string = "http://ispmon.cloud/gometrics"
 )
 
-type pushResults struct {
-	http		[]map[string]map[string]int64
-	ping		[]map[string]map[string]float64
-	speed       string
-	uid			string
-	isp 		string
-	country		string
-	city		string
+type PushResults struct {
+	Http		[]map[string]map[string]int64
+	Ping		[]map[string]map[string]float64
+	Speed       string
+	Uid			string
+	Isp 		string
+	Country		string
+	City		string
 }
 
 func main() {
@@ -106,23 +110,42 @@ func main() {
 		// speed test
 		downloadSpeed := "null"
 		t := time.Now()
-		elapsed := t.Sub(start)
+		elapsed := t.Sub(start).Minutes()
 		if int(elapsed) >= interval {
 			downloadSpeed = fmt.Sprintf("%f", getDownloadSpeed()) //float64 to String
 			start = time.Now()
 		}
 
 		// push results
-		push := pushResults{}
-		push.speed = downloadSpeed
-		push.http = httpResults
-		push.ping = pingResults
-		push.isp = IpInfo["isp"]
-		push.country = IpInfo["country"]
-		push.city = IpInfo["city"]
-		push.uid = uid
+		push := PushResults{}
+		push.Speed = downloadSpeed
+		push.Http = httpResults
+		push.Ping = pingResults
+		push.Isp = IpInfo["isp"]
+		push.Country = IpInfo["country"]
+		push.City = IpInfo["city"]
+		push.Uid = uid
 
 		fmt.Printf("%+v\n", push)
+
+		b, err := json.Marshal(push)
+		//fmt.Printf("%+v", b)
+
+
+		req, err := http.NewRequest("POST", PushInfoUrl, bytes.NewBuffer(b))
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+
+		fmt.Println("response Status:", resp.Status)
+		fmt.Println("response Headers:", resp.Header)
+		body, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println("response Body:", string(body))
 	}
 
 
