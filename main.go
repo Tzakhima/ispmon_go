@@ -35,10 +35,10 @@ var (
 type PushResults struct {
     Http        []map[string]map[string]int64
     Ping        []map[string]map[string]float64
-    Speed        string
-    Uid            string
+    Speed       string
+    Uid         string
     Isp         string
-    Country        string
+    Country     string
     City        string
 }
 

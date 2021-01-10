@@ -16,15 +16,15 @@ import (
 
 // Init global types
 type parameters struct {
-    Ping        []string `json:"ping_target"`
+    Ping          []string `json:"ping_target"`
     HTTP          []string `json:"http_target"`
     Interval      int      `json:"speed_interval"`
 }
 
 type ipInfoStruct struct {
-    City        string  `json:"city"`
-    Country        string  `json:"country"`
-    ISP            string  `json:"org"`
+    City          string  `json:"city"`
+    Country       string  `json:"country"`
+    ISP           string  `json:"org"`
 }
 
 
@@ -43,6 +43,7 @@ func getMacAddr() ([]string, error) {
     }
     return as, nil
 }
+
 
 func getParameters() ([]string, []string, int, error) {
 
@@ -79,6 +80,7 @@ func getParameters() ([]string, []string, int, error) {
     return response.Ping, response.HTTP, response.Interval, nil
 
 }
+
 
 func getIspInfo() (map[string]string, error) {
     infoClient := http.Client{
@@ -118,6 +120,7 @@ func getIspInfo() (map[string]string, error) {
     return returnInfo, nil
 
 }
+
 
 func getHttpStat(url string, c chan map[string]map[string]int64) {
 
@@ -161,6 +164,7 @@ func getHttpStat(url string, c chan map[string]map[string]int64) {
     c <- results
 }
 
+
 func getPingStat(target string, wg *sync.WaitGroup) map[string]map[string]float64 {
     defer wg.Done()
 
@@ -202,6 +206,7 @@ func getPingStat(target string, wg *sync.WaitGroup) map[string]map[string]float6
     return result
 
 }
+
 
 func getDownloadSpeed() float64 {
     fastCom := fast.New()
