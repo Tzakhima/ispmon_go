@@ -11,14 +11,16 @@
 package main
 
 import (
-    "bytes"
-    "crypto/sha1"
-    "encoding/json"
+	"bytes"
+	"crypto/sha1"
+	"encoding/json"
+	"flag"
     "fmt"
-    "net/http"
-    "os"
-    "sync"
-    "time"
+	"log"
+	"net/http"
+	"os"
+	"sync"
+	"time"
 )
 
 const (
@@ -29,7 +31,8 @@ const (
 
 // How many PING to send
 var (
-    pingCount int = 10
+    pingCount uint
+    verbose bool
 )
 
 type PushResults struct {
@@ -44,6 +47,10 @@ type PushResults struct {
 
 
 func main() {
+
+    flag.UintVar(&pingCount, "ping-count", 10, "ping count")
+    flag.BoolVar(&verbose, "verbose", false, "enable verbose logging")
+    flag.Parse()
 
     // Getting current time for Speedtest interval
     start := time.Now()
@@ -75,6 +82,10 @@ func main() {
             goto GETINFO
         }
 
+    if verbose {
+        log.Printf("IpInfo=%v", IpInfo)
+    }
+
     for {
         // getting targets and interval parameters
         GETPARAM:
@@ -85,7 +96,12 @@ func main() {
                 goto GETPARAM
             }
 
-
+        if verbose {
+            log.Printf("pingLinks=%v", pingLinks)
+            log.Printf("httpLinks=%v", pingLinks)
+            log.Printf("interval=%d",  interval)
+        }
+        
         // http trace
         var httpResults []map[string]map[string]int64
         c := make(chan map[string]map[string]int64) // Using channel and not WaitingGroup just for fun :-)
@@ -98,6 +114,10 @@ func main() {
             httpResults = append(httpResults, <-c)
         }
 
+        if verbose {
+            log.Printf("http results: %v", httpResults)
+        }
+
         // PING test
         var wg sync.WaitGroup
         var pingResults []map[string]map[string]float64
@@ -105,12 +125,23 @@ func main() {
         for _, t := range pingLinks {
             wg.Add(1)
             go func(t string) {
+                if verbose {
+                    log.Printf("ping '%s' starting", t)
+                }
                 result := getPingStat(t, &wg)
+                if verbose {
+                    log.Printf("ping '%s' results=%v", t, result)
+                }
                 pingResults = append(pingResults, result)
+                wg.Done()
             }(t)
         }
 
         wg.Wait()
+
+        if verbose {
+            log.Printf("ping results: %v", pingResults)
+        }
 
         // speed test
         downloadSpeed := "null"
@@ -142,11 +173,14 @@ func main() {
         }
         defer resp.Body.Close()
 
-        // Print Response
-        //fmt.Println("response Status:", resp.Status)
-        //fmt.Println("response Headers:", resp.Header)
-        //body, _ := ioutil.ReadAll(resp.Body)
-        //fmt.Println("response Body:", string(body))
+        // Print Response if verbose
+        if verbose {
+            log.Println("response Status:", resp.Status)
+            // log.Println("response Headers:", resp.Header)
+            // body, _ := ioutil.ReadAll(resp.Body)
+            // fmt.Println("response Body:", string(body))
+
+        }
     }
 
 
