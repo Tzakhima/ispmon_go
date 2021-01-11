@@ -166,14 +166,15 @@ func getHttpStat(url string, c chan map[string]map[string]int64) {
 
 
 func getPingStat(target string, wg *sync.WaitGroup) map[string]map[string]float64 {
-    defer wg.Done()
 
     result := make(map[string]map[string]float64)
     result[target] = make(map[string]float64)
 
     pinger, err := ping.NewPinger(target)
     pinger.SetPrivileged(true)
-
+    
+    defer wg.Done()
+    
     if err != nil {
         fmt.Printf("%+v", err)
         result[target]["packetLoss"] = 0
@@ -184,7 +185,8 @@ func getPingStat(target string, wg *sync.WaitGroup) map[string]map[string]float6
         return result
     }
 
-    pinger.Count = pingCount
+    pinger.Count = int(pingCount) // why is this int?  you can't send a negitive number of pings!
+    pinger.Timeout = time.Duration((pingCount+5) * uint(time.Second))
     err = pinger.Run()
     if err != nil {
         fmt.Printf("%+v", err)
