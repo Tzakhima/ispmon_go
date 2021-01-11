@@ -7,6 +7,7 @@ import (
     "github.com/ddo/go-fast"
     "github.com/go-ping/ping"
     "io/ioutil"
+    "log"
     "net"
     "net/http"
     "net/http/httptrace"
@@ -129,6 +130,7 @@ func getHttpStat(url string, c chan map[string]map[string]int64) {
     req, _ := http.NewRequest("GET", schema+url, nil)
 
     var start, connect, dns, tlsHandshake time.Time
+    var reused bool
 
     results := make(map[string]map[string]int64)
     results[url] = make(map[string]int64)
@@ -153,13 +155,22 @@ func getHttpStat(url string, c chan map[string]map[string]int64) {
         GotFirstResponseByte: func() {
             results[url]["ttfbTime"] = int64(time.Since(start) / time.Millisecond)
         },
+
+        GotConn: func(info httptrace.GotConnInfo) {
+            reused = info.Reused
+        },
     }
+
 
     req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
     start = time.Now()
     if _, err := http.DefaultTransport.RoundTrip(req); err != nil {
         fmt.Errorf("could not run HTTP stat: %g", err)
     }
+
+   if verbose {
+       log.Printf("Is The connection to %v reused ? %v\n", url, reused)
+   }
 
     c <- results
 }

@@ -1,9 +1,8 @@
 // ISPMON Client
 // Gets list of targets from http://ispmon.cloud/config and executing the following:
 // HTTP Trace - measure the DNS time, TLS Handshake time, Connection time and Time To First Byte.
-// PING       - running 60 PING against the list of targets. reports back the avg RTT and Packet Loss ratio.
-// SpeedTest  - Although the results are not always accurate, running SpeedTest every <interval> and reports back
-//              Download and Upload speed.
+// PING       - running 120 PING (by default) against the list of targets. reports back the avg RTT and Packet Loss ratio.
+// SpeedTest  - Using Netflix Fast.com Speed-test every <interval>
 //
 //  When starting, you should see your UID printed to STDOUT.
 //  To see your results please navigate to https://ispmon.cloud Grafana dashboard. (look for your UID)
@@ -11,16 +10,17 @@
 package main
 
 import (
-	"bytes"
-	"crypto/sha1"
-	"encoding/json"
-	"flag"
+    "bytes"
+    "crypto/sha1"
+    "encoding/json"
+    "flag"
     "fmt"
-	"log"
-	"net/http"
-	"os"
-	"sync"
-	"time"
+    "log"
+    "net"
+    "net/http"
+    "os"
+    "sync"
+    "time"
 )
 
 const (
@@ -48,14 +48,14 @@ type PushResults struct {
 
 func main() {
 
-    flag.UintVar(&pingCount, "ping-count", 60, "ping count")
+    flag.UintVar(&pingCount, "ping-count", 120, "ping count")
     flag.BoolVar(&verbose, "verbose", false, "enable verbose logging")
     flag.Parse()
 
-    // Getting current time for Speedtest interval
+    // GETTING CURRENT TIME FOR SPEED-TEST INTERVAL
     start := time.Now()
 
-    // calculate user unique id based on MAC addresses. variable: uid
+    // CALCULATE USER UNIQUE ID - UID
     mac, err := getMacAddr()
 
     if err != nil {
@@ -70,9 +70,10 @@ func main() {
 
     macSha1  := sha1.Sum([]byte(macString))
     uid := fmt.Sprintf("%x\n", string(macSha1[:]))[0:10]
+    fmt.Printf("Your Unique ID is: %v. Go to https://ispmon.cloud to see your results", uid)
 
 
-    // get client and ISP info from ipinfo.io
+    // GET CLIENT IP AND ISP INFO
     GETINFO: // yes yes I know, goto is ugly...
         IpInfo, err := getIspInfo()
         if err !=nil {
@@ -87,22 +88,34 @@ func main() {
     }
 
     for {
-        // getting targets and interval parameters
+        // GET TARGETS AND INTERVAL INFO
         GETPARAM:
             pingLinks, httpLinks, interval, err := getParameters()
             if err != nil {
-                fmt.Printf("Error getting parameters: %s", err )
-                fmt.Println("Trying again in 2 sec")
+                log.Printf("Error getting parameters: %s", err )
+                log.Println("Trying again in 2 sec")
                 goto GETPARAM
             }
 
         if verbose {
             log.Printf("pingLinks=%v", pingLinks)
-            log.Printf("httpLinks=%v", pingLinks)
+            log.Printf("httpLinks=%v", httpLinks)
             log.Printf("interval=%d",  interval)
         }
-        
-        // http trace
+
+
+        // RUN HTTP TRACE
+
+        // Editing transport parameters to avoid connection reuse
+        http.DefaultTransport = &http.Transport{
+            ForceAttemptHTTP2:     false,
+            IdleConnTimeout:       1 * time.Second,
+            DialContext: (&net.Dialer{
+                Timeout:   10 * time.Second,
+                KeepAlive: 1 * time.Second,
+            }).DialContext,
+        }
+
         var httpResults []map[string]map[string]int64
         c := make(chan map[string]map[string]int64) // Using channel and not WaitingGroup just for fun :-)
 
@@ -118,7 +131,7 @@ func main() {
             log.Printf("http results: %v", httpResults)
         }
 
-        // PING test
+        // PING TEST
         var wg sync.WaitGroup
         var pingResults []map[string]map[string]float64
 
@@ -143,7 +156,7 @@ func main() {
             log.Printf("ping results: %v", pingResults)
         }
 
-        // speed test
+        // RUN SPEED TEST
         downloadSpeed := "null"
         t := time.Now()
         elapsed := t.Sub(start).Minutes()
@@ -152,7 +165,7 @@ func main() {
             start = time.Now()
         }
 
-        // push results
+        // PUSH RESULTS
         push := PushResults{}
         push.Speed = downloadSpeed
         push.Http = httpResults
