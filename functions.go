@@ -172,7 +172,9 @@ func getPingStat(target string, wg *sync.WaitGroup) map[string]map[string]float6
 
     pinger, err := ping.NewPinger(target)
     pinger.SetPrivileged(true)
-
+    
+    defer wg.Done()
+    
     if err != nil {
         fmt.Printf("%+v", err)
         result[target]["packetLoss"] = 0
