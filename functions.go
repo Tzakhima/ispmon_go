@@ -46,7 +46,7 @@ func getMacAddr() ([]string, error) {
 }
 
 
-func getParameters() ([]string, []string, int, error) {
+func getParameters() (*parameters, error) {
 
     apiClient := http.Client{
         Timeout: time.Second * 2,
@@ -54,13 +54,13 @@ func getParameters() ([]string, []string, int, error) {
 
     req, err := http.NewRequest(http.MethodGet, ParametersUrl, nil)
     if err != nil {
-        return nil, nil, -1, fmt.Errorf("could not build HTTP request: %g", err)
+        return nil, fmt.Errorf("could not build HTTP request: %g", err)
     }
 
     res, getErr := apiClient.Do(req)
 
     if getErr != nil {
-        return nil, nil, -1, fmt.Errorf("could not get HTTP request: %g", getErr)
+        return nil, fmt.Errorf("could not get HTTP request: %g", getErr)
     }
 
     if res.Body != nil {
@@ -69,21 +69,20 @@ func getParameters() ([]string, []string, int, error) {
 
     body, readErr := ioutil.ReadAll(res.Body)
     if readErr != nil {
-        return nil, nil, -1, fmt.Errorf("could not read Body: %g", readErr)
+        return nil, fmt.Errorf("could not read Body: %g", readErr)
     }
 
-    response := parameters{}
+    response := new(parameters)
     jsonErr := json.Unmarshal(body, &response)
     if jsonErr != nil {
-        return nil, nil, -1, fmt.Errorf("could not unmarshal json: %g", jsonErr)
+        return nil, fmt.Errorf("could not unmarshal json: %g", jsonErr)
     }
 
-    return response.Ping, response.HTTP, response.Interval, nil
-
+    return response, nil
 }
 
 
-func getIspInfo() (map[string]string, error) {
+func getIspInfo() (*ipInfoStruct, error) {
     infoClient := http.Client{
         Timeout: time.Second * 2,
     }
@@ -107,18 +106,13 @@ func getIspInfo() (map[string]string, error) {
         return nil, fmt.Errorf("could not read body: %g", readErr)
     }
 
-    respInfo := ipInfoStruct{}
+    respInfo := new(ipInfoStruct)
     jsonErr  := json.Unmarshal(body, &respInfo)
     if jsonErr != nil {
-        return nil, fmt.Errorf("could not unmarshal JSON: %g", jsonErr)
+        return respInfo, fmt.Errorf("could not unmarshal JSON: %g", jsonErr)
     }
 
-    returnInfo := make(map[string]string)
-    returnInfo["country"] = respInfo.Country
-    returnInfo["city"]    = respInfo.City
-    returnInfo["isp"]     = respInfo.ISP
-
-    return returnInfo, nil
+    return respInfo, nil
 
 }
 
@@ -185,7 +179,7 @@ func getPingStat(target string, wg *sync.WaitGroup) map[string]map[string]float6
     pinger.SetPrivileged(true)
         
     if err != nil {
-        fmt.Printf("%+v", err)
+        log.Printf("%+v", err)
         result[target]["packetLoss"] = 0
         result[target]["minRTT"]     = 0
         result[target]["avgRTT"]     = 0
@@ -198,7 +192,7 @@ func getPingStat(target string, wg *sync.WaitGroup) map[string]map[string]float6
     pinger.Timeout = time.Duration((pingCount+5) * uint(time.Second))
     err = pinger.Run()
     if err != nil {
-        fmt.Printf("%+v", err)
+        log.Printf("%+v", err)
         result[target]["packetLoss"] = 0
         result[target]["minRTT"]     = 0
         result[target]["avgRTT"]     = 0
