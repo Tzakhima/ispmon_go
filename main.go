@@ -59,7 +59,7 @@ func main() {
     mac, err := getMacAddr()
 
     if err != nil {
-        fmt.Printf("Error getting Mac address: %s", err )
+        log.Printf("Error getting Mac address: %s", err )
         os.Exit(1) // If we cant generate UID there is no pint to continue
     }
 
@@ -70,27 +70,26 @@ func main() {
 
     macSha1  := sha1.Sum([]byte(macString))
     uid := fmt.Sprintf("%x\n", string(macSha1[:]))[0:10]
-    fmt.Printf("Your Unique ID is: %v. Go to https://ispmon.cloud to see your results\n\n", uid)
+    log.Printf("Your Unique ID is: %v. Go to https://ispmon.cloud to see your results", uid)
 
 
-    // GET CLIENT IP AND ISP INFO
     GETINFO: // yes yes I know, goto is ugly...
-        IpInfo, err := getIspInfo()
+        IPInfo, err := getIspInfo()
         if err !=nil {
-            fmt.Printf("Error getting client IP info: %s", err )
-            fmt.Println("Trying again in 2 sec")
+            log.Printf("Error getting client IP info: %s", err )
+            log.Println("Trying again in 2 sec")
             time.Sleep(2*time.Second)
             goto GETINFO
         }
 
     if verbose {
-        log.Printf("IpInfo=%v", IpInfo)
+        log.Printf("IpInfo=%v", IPInfo)
     }
 
     for {
         // GET TARGETS AND INTERVAL INFO
         GETPARAM:
-            pingLinks, httpLinks, interval, err := getParameters()
+            params, err := getParameters()
             if err != nil {
                 log.Printf("Error getting parameters: %s", err )
                 log.Println("Trying again in 2 sec")
@@ -98,9 +97,7 @@ func main() {
             }
 
         if verbose {
-            log.Printf("pingLinks=%v", pingLinks)
-            log.Printf("httpLinks=%v", httpLinks)
-            log.Printf("interval=%d",  interval)
+            log.Printf("params=%v", params)
         }
 
 
@@ -119,11 +116,11 @@ func main() {
         var httpResults []map[string]map[string]int64
         c := make(chan map[string]map[string]int64) // Using channel and not WaitingGroup just for fun :-)
 
-        for _, link := range httpLinks {
+        for _, link := range params.HTTP {
             go getHttpStat(link, c)
         }
 
-        for i := 0; i < len(httpLinks); i++ {
+        for i := 0; i < len(params.HTTP); i++ {
             httpResults = append(httpResults, <-c)
         }
 
@@ -135,7 +132,7 @@ func main() {
         var wg sync.WaitGroup
         var pingResults []map[string]map[string]float64
 
-        for _, t := range pingLinks {
+        for _, t := range params.Ping {
             wg.Add(1)
             go func(t string) {
                 if verbose {
@@ -160,7 +157,7 @@ func main() {
         downloadSpeed := "null"
         t := time.Now()
         elapsed := t.Sub(start).Minutes()
-        if int(elapsed) >= interval {
+        if int(elapsed) >= params.Interval {
             downloadSpeed = fmt.Sprintf("%f", getDownloadSpeed()) //float64 to String
             start = time.Now()
         }
@@ -170,9 +167,9 @@ func main() {
         push.Speed = downloadSpeed
         push.Http = httpResults
         push.Ping = pingResults
-        push.Isp = IpInfo["isp"]
-        push.Country = IpInfo["country"]
-        push.City = IpInfo["city"]
+        push.Isp = IPInfo.ISP
+        push.Country = IPInfo.Country
+        push.City = IPInfo.City
         push.Uid = uid
 
         b, err := json.Marshal(push)
@@ -182,7 +179,7 @@ func main() {
         client := &http.Client{}
         resp, err := client.Do(req)
         if err != nil {
-            fmt.Errorf("could not send HTTP POST: %g", err)
+            log.Printf("could not send HTTP POST: %s", err)
         }
         defer resp.Body.Close()
 
