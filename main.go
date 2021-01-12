@@ -93,6 +93,7 @@ func main() {
             if err != nil {
                 log.Printf("Error getting parameters: %s", err )
                 log.Println("Trying again in 2 sec")
+                time.Sleep(2*time.Second)
                 goto GETPARAM
             }
 
