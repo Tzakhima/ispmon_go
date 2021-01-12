@@ -24,9 +24,9 @@ import (
 )
 
 const (
-    ParametersUrl string = "http://ispmon.cloud/config"
-    IpInfoUrl     string = "http://ipinfo.io/"
-    PushInfoUrl   string = "http://ispmon.cloud/gometrics"
+    parametersURL string = "http://ispmon.cloud/config"
+    ipInfoURL     string = "http://ipinfo.io/"
+    pushInfoURL   string = "http://ispmon.cloud/gometrics"
 )
 
 // How many PING to send
@@ -35,11 +35,11 @@ var (
     verbose bool
 )
 
-type PushResults struct {
-    Http        []map[string]map[string]int64
+type pushResults struct {
+    HTTP        []map[string]map[string]int64
     Ping        []map[string]map[string]float64
     Speed       string
-    Uid         string
+    UID         string
     Isp         string
     Country     string
     City        string
@@ -118,7 +118,7 @@ func main() {
         c := make(chan map[string]map[string]int64) // Using channel and not WaitingGroup just for fun :-)
 
         for _, link := range params.HTTP {
-            go getHttpStat(link, c)
+            go getHTTPStat(link, c)
         }
 
         for i := 0; i < len(params.HTTP); i++ {
@@ -164,17 +164,17 @@ func main() {
         }
 
         // PUSH RESULTS
-        push := PushResults{}
+        push := pushResults{}
         push.Speed = downloadSpeed
-        push.Http = httpResults
+        push.HTTP = httpResults
         push.Ping = pingResults
         push.Isp = IPInfo.ISP
         push.Country = IPInfo.Country
         push.City = IPInfo.City
-        push.Uid = uid
+        push.UID = uid
 
         b, err := json.Marshal(push)
-        req, err := http.NewRequest("POST", PushInfoUrl, bytes.NewBuffer(b))
+        req, err := http.NewRequest("POST", pushInfoURL, bytes.NewBuffer(b))
         req.Header.Set("Content-Type", "application/json")
 
         client := &http.Client{}
