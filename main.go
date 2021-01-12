@@ -70,7 +70,7 @@ func main() {
 
     macSha1  := sha1.Sum([]byte(macString))
     uid := fmt.Sprintf("%x\n", string(macSha1[:]))[0:10]
-    fmt.Printf("Your Unique ID is: %v. Go to https://ispmon.cloud to see your results", uid)
+    fmt.Printf("Your Unique ID is: %v. Go to https://ispmon.cloud to see your results\n\n", uid)
 
 
     // GET CLIENT IP AND ISP INFO
