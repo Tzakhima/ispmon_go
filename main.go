@@ -131,7 +131,7 @@ func main() {
 
         // PING TEST
         var wg sync.WaitGroup
-        var pingResults map[string]*pingResult
+        pingResults := make(map[string]*pingResult)
 
         for _, t := range params.Ping {
             wg.Add(1)
