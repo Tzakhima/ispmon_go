@@ -35,9 +35,10 @@ var (
     verbose bool
 )
 
-type pushResults struct {
-    HTTP        []map[string]map[string]int64
-    Ping        []map[string]map[string]float64
+
+type PushResults struct {
+    Http        []map[string]map[string]int64
+    Ping        map[string]*pingResult
     Speed       string
     UID         string
     Isp         string
@@ -131,7 +132,7 @@ func main() {
 
         // PING TEST
         var wg sync.WaitGroup
-        var pingResults []map[string]map[string]float64
+        pingResults := make(map[string]*pingResult)
 
         for _, t := range params.Ping {
             wg.Add(1)
@@ -139,11 +140,11 @@ func main() {
                 if verbose {
                     log.Printf("ping '%s' starting", t)
                 }
-                result := getPingStat(t, &wg)
+                result := getPingStat(t, pingCount)
                 if verbose {
                     log.Printf("ping '%s' results=%v", t, result)
                 }
-                pingResults = append(pingResults, result)
+                pingResults[t] = result
                 wg.Done()
             }(t)
         }
