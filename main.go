@@ -15,6 +15,7 @@ import (
     "encoding/json"
     "flag"
     "fmt"
+    "io/ioutil"
     "log"
     "net"
     "net/http"
@@ -188,8 +189,9 @@ func main() {
         if verbose {
             log.Println("response Status:", resp.Status)
             // log.Println("response Headers:", resp.Header)
-            // body, _ := ioutil.ReadAll(resp.Body)
-            // fmt.Println("response Body:", string(body))
+            body, _ := ioutil.ReadAll(resp.Body)
+            log.Println("response Body:", string(body))
+            log.Println("end of push\n\n")
 
         }
     }
