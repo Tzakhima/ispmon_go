@@ -50,7 +50,7 @@ func getParameters() (*parameters, error) {
         Timeout: time.Second * 2,
     }
 
-    req, err := http.NewRequest(http.MethodGet, ParametersUrl, nil)
+    req, err := http.NewRequest(http.MethodGet, parametersURL, nil)
     if err != nil {
         return nil, fmt.Errorf("could not build HTTP request: %g", err)
     }
@@ -85,7 +85,7 @@ func getIspInfo() (*ipInfoStruct, error) {
         Timeout: time.Second * 2,
     }
 
-    req, err := http.NewRequest(http.MethodGet, IpInfoUrl, nil)
+    req, err := http.NewRequest(http.MethodGet, ipInfoURL, nil)
     if err != nil {
         return nil, fmt.Errorf("could not build HTTP request: %g", err)
     }
@@ -115,7 +115,7 @@ func getIspInfo() (*ipInfoStruct, error) {
 }
 
 
-func getHttpStat(url string, c chan map[string]map[string]int64) {
+func getHTTPStat(url string, c chan map[string]map[string]int64) {
 
     schema := "https://"
 
