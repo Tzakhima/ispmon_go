@@ -141,9 +141,6 @@ func main() {
                     log.Printf("ping '%s' starting", t)
                 }
                 result := getPingStat(t, pingCount)
-                if verbose {
-                    log.Printf("ping '%s' results=%v", t, result)
-                }
                 pingResults[t] = result
                 wg.Done()
             }(t)
@@ -152,7 +149,9 @@ func main() {
         wg.Wait()
 
         if verbose {
-            log.Printf("ping results: %v", pingResults)
+            for t, r := range pingResults {
+                log.Printf("ping: %+v, results: %+v\n", t, r)
+            }
         }
 
         // RUN SPEED TEST
