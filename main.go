@@ -165,9 +165,9 @@ func main() {
         }
 
         // PUSH RESULTS
-        push := pushResults{}
+        push := PushResults{}
         push.Speed = downloadSpeed
-        push.HTTP = httpResults
+        push.Http = httpResults
         push.Ping = pingResults
         push.Isp = IPInfo.ISP
         push.Country = IPInfo.Country
