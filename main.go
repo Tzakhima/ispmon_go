@@ -49,7 +49,7 @@ type PushResults struct {
 
 
 func main() {
-
+    //TODO: add "verbose levels"
     flag.UintVar(&pingCount, "ping-count", 60, "ping count")
     flag.BoolVar(&verbose, "verbose", false, "enable verbose logging")
     flag.Parse()
