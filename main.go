@@ -37,8 +37,8 @@ var (
 )
 
 
-type PushResults struct {
-    Http        []map[string]map[string]int64
+type pushResults struct {
+    HTTP        []map[string]map[string]int64
     Ping        map[string]*pingResult
     Speed       string
     UID         string
@@ -87,6 +87,8 @@ func main() {
     if verbose {
         log.Printf("IpInfo=%v", IPInfo)
     }
+
+    var pingMutex = &sync.Mutex{}
 
     for {
         // GET TARGETS AND INTERVAL INFO
@@ -137,14 +139,17 @@ func main() {
 
         for _, t := range params.Ping {
             wg.Add(1)
-            go func(t string) {
+            go func(t string, mutex *sync.Mutex) {
                 if verbose {
                     log.Printf("ping '%s' starting", t)
                 }
                 result := getPingStat(t, pingCount)
+                // maps are not thread safe
+                mutex.Lock()
                 pingResults[t] = result
+                mutex.Unlock()
                 wg.Done()
-            }(t)
+            }(t, pingMutex)
         }
 
         wg.Wait()
@@ -165,9 +170,9 @@ func main() {
         }
 
         // PUSH RESULTS
-        push := PushResults{}
+        push := pushResults{}
         push.Speed = downloadSpeed
-        push.Http = httpResults
+        push.HTTP = httpResults
         push.Ping = pingResults
         push.Isp = IPInfo.ISP
         push.Country = IPInfo.Country
